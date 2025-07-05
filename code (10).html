@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Productos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f8f9fa; }
+        .product-list-container { max-width: 800px; margin: auto; }
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div id="app-container" class="product-list-container container py-4">
+        <div class="card p-4">
+            <div class="text-center mb-4">
+                <h1 id="app-title" class="mb-3">Nuestro Catálogo</h1>
+            </div>
+            <div id="product-list">
+                <!-- Los productos se renderizarán aquí -->
+            </div>
+            <div id="error-message" class="alert alert-danger d-none mt-3">
+                No se pudieron cargar los productos. El enlace puede estar incompleto o corrupto.
+            </div>
+        </div>
+        <footer class="text-center text-muted mt-4">
+            <p><small>Catálogo generado dinámicamente.</small></p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const productListDiv = document.getElementById('product-list');
+            const errorDiv = document.getElementById('error-message');
+            const titleEl = document.getElementById('app-title');
+
+            try {
+                // 1. Obtener los datos del fragmento de la URL (#)
+                const hash = window.location.hash.substring(1);
+                if (!hash) {
+                    throw new Error("No data in URL");
+                }
+
+                // 2. Decodificar de Base64 y parsear el JSON
+                const decodedJson = atob(hash);
+                const data = JSON.parse(decodedJson);
+                
+                const { appTitle, products } = data;
+                
+                if (appTitle) {
+                    titleEl.innerText = appTitle;
+                    document.title = appTitle;
+                }
+
+                if (!products || products.length === 0) {
+                     productListDiv.innerHTML = '<p class="text-center text-muted">No hay productos disponibles en este momento.</p>';
+                     return;
+                }
+
+                // 3. Agrupar productos por categoría
+                const productsByCategory = products.reduce((acc, product) => {
+                    const category = product.c || 'General';
+                    if (!acc[category]) {
+                        acc[category] = [];
+                    }
+                    acc[category].push(product);
+                    return acc;
+                }, {});
+
+                // 4. Renderizar la lista
+                let html = '';
+                const sortedCategories = Object.keys(productsByCategory).sort();
+
+                for (const category of sortedCategories) {
+                    html += `<h3 class="mt-4 mb-3 border-bottom pb-2">${category}</h3>`;
+                    html += '<ul class="list-group list-group-flush">';
+                    productsByCategory[category]
+                        .sort((a, b) => a.n.localeCompare(b.n))
+                        .forEach(p => {
+                            const price = `$${Number(p.p || 0).toFixed(2)}`;
+                            html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                ${p.n}
+                                <span class="badge bg-primary rounded-pill fs-6">${price}</span>
+                            </li>`;
+                        });
+                    html += '</ul>';
+                }
+                productListDiv.innerHTML = html;
+
+            } catch (e) {
+                console.error("Failed to render product list:", e);
+                errorDiv.classList.remove('d-none');
+            }
+        });
+    </script>
+</body>
+</html>
